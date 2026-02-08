@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="xx">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -33,9 +33,9 @@
 
     <div id="start-screen">
         <h1 style="font-size: 52px; animation: glitch 1.5s infinite;">THUUL'VOR KWEETH</h1>
-        <p style="font-size: 22px;">GH'RNA KHUL'TAR OBRIGATORIUM</p>
+        <p style="font-size: 22px;">GH'RNA KHUL'TAR OBRIGATORIO</p>
         <p style="font-size: 20px;">SHUUB'EE VOR N'GHFT YA</p>
-        <div id="start-btn">ENTRAR NO ABISMO</div>
+        <div id="start-btn">ENTRAR EN EL ABISMO</div>
     </div>
 
     <canvas id="render"></canvas>
@@ -45,6 +45,7 @@
     <div id="ui">
         <div id="sanity-meter"><div id="sanity-fill"></div></div>
         <div id="debug" style="margin-top: 8px; font-size: 14px; color: #f00;"></div>
+        <div id="hint" style="margin-top: 4px; font-size: 13px; color: #a00; opacity: 0.8;"></div>
     </div>
 
     <div class="controls">
@@ -54,20 +55,15 @@
     </div>
 
     <script>
-        // ========================================================
-        // AVISO OCULTO
-        // thulgh-vor-666@simplelogin.com
-        // ========================================================
-
         const canvas = document.getElementById('render');
         const ctx = canvas.getContext('2d');
         const sanityFill = document.getElementById('sanity-fill');
         const debugUI = document.getElementById('debug');
+        const hintUI = document.getElementById('hint');
         
         const SIZE = 28;
         let map = new Array(SIZE * SIZE).fill(0);
 
-        // Geração do mapa (igual à versão que você enviou)
         for (let y = 0; y < SIZE; y++) {
             for (let x = 0; x < SIZE; x++) {
                 if (x === 0 || x === SIZE-1 || y === 0 || y === SIZE-1) {
@@ -77,7 +73,6 @@
                 }
             }
         }
-        // Área inicial livre
         for(let y=12; y<17; y++) for(let x=12; x<17; x++) map[y*SIZE+x] = 0;
 
         let p = { x: 14.5, y: 14.5, rot: Math.PI/2, san: 100, lightOn: true };
@@ -87,9 +82,9 @@
         let idleTimer = 0;
 
         const PILLARS = [
-            {x: 15, y: 15},
-            {x: 6,  y: 6},
-            {x: 21, y: 21}
+            {x: 15, y: 15, hint: "El Primer Pilar está en el centro... Quédate inmóvil para despertarlo."},
+            {x: 6,  y: 6, hint: "La sangre llama al segundo en el noroeste... No te muevas."},
+            {x: 21, y: 21, hint: "El tercero espera en el sureste... El vacío observa."}
         ];
         let pillarIndex = 0;
         let pillarTimer = 0;
@@ -98,7 +93,6 @@
             {x:8, y:8}, {x:15,y:20}, {x:3,y:19}, {x:20,y:7}, {x:11,y:22}
         ];
         let shuubeeActive = false;
-        let shuubeeTimer = 0;
         let shuubeeState = 0;
 
         let bloodTrails = [];
@@ -261,11 +255,11 @@
             if (!moved) idleTimer++;
             else idleTimer = 0;
 
-            if (idleTimer > 480 && Math.random() < 0.008 + (idleTimer-480)/20000) {
-                triggerScream(0.5 + idleTimer/4000, 2.5 + idleTimer/1200);
-            }
-
-            p.san = Math.max(0, Math.min(100, p.san + 0.08 - (p.san < 30 ? 0.04 : 0)));
+            // Drenaje de sanidad
+            let sanDrain = 0;
+            if (p.san < 30) sanDrain += 0.08;
+            if (idleTimer > 300) sanDrain += 0.05;
+            p.san = Math.max(0, Math.min(100, p.san + 0.08 - sanDrain));
 
             sanityFill.style.width = `${p.san}%`;
             if (p.san < 30) {
@@ -276,7 +270,17 @@
 
             let px = Math.floor(p.x);
             let py = Math.floor(p.y);
-            debugUI.innerText = `X: ${px}   Y: ${py}`;
+            debugUI.innerText = `X: ${px}   Y: ${py} - Sanidad: ${Math.floor(p.san)}%`;
+
+            // Dicas en español
+            let hintText = "";
+            if (p.san < 60) {
+                hintText = PILLARS[pillarIndex].hint || "Siento algo antiguo aquí... Quédate inmóvil.";
+            }
+            if (Math.abs(px - PILLARS[pillarIndex].x) < 2 && Math.abs(py - PILLARS[pillarIndex].y) < 2) {
+                hintText = "¡PILAR DETECTADO - QUÉDATE INMÓVIL!";
+            }
+            hintUI.innerText = hintText;
 
             shuubeeActive = SHUUBEE_SPOTS.some(s => s.x === px && s.y === py);
             if (shuubeeActive) updateMorseVisualAndSound();
@@ -358,9 +362,9 @@
                 }
 
                 let h = canvas.height / (dist * Math.cos(angle - p.rot));
-                let fog = 1 - (dist/12); // Menos fog = mais visão
+                let fog = 1 - (dist/12);
 
-                let light = shuubeeActive ? (shuubeeState ? 2.0 : 0.4) : 1.5; // Luz base mais forte
+                let light = shuubeeActive ? (shuubeeState ? 2.0 : 0.4) : 1.5;
 
                 let floorYstart = (canvas.height + h) / 2;
                 for (let y = floorYstart; y < canvas.height; y += 2) {
